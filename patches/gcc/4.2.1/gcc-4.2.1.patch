@@ -1,0 +1,158 @@
+diff -Naur gcc-4.2.1/gcc/Makefile.in gcc-4.2.1-arm/gcc/Makefile.in
+--- gcc-4.2.1/gcc/Makefile.in	Thu May 31 15:37:38 2007
++++ gcc-4.2.1-arm/gcc/Makefile.in	Tue Aug 14 17:42:11 2007
+@@ -871,7 +871,7 @@
+ # -I$(@D) and -I$(srcdir)/$(@D) cause the subdirectory of the file
+ # currently being compiled, in both source trees, to be examined as well.
+ # libintl.h will be found in ../intl if we are using the included libintl.
+-INCLUDES = -I. -I$(@D) -I$(srcdir) -I$(srcdir)/$(@D) \
++INCLUDES = -I. -I$(srcdir) \
+ 	   -I$(srcdir)/../include @INCINTL@ \
+ 	   $(CPPINC) $(GMPINC) $(DECNUMINC)
+ 
+diff -Naur gcc-4.2.1/gcc/c-incpath.c gcc-4.2.1-arm/gcc/c-incpath.c
+--- gcc-4.2.1/gcc/c-incpath.c	Thu May 18 22:16:23 2006
++++ gcc-4.2.1-arm/gcc/c-incpath.c	Tue Aug 14 17:42:11 2007
+@@ -340,13 +340,18 @@
+   cpp_dir *p;
+ 
+ #if defined (HAVE_DOS_BASED_FILE_SYSTEM)
+-  /* Convert all backslashes to slashes.  The native CRT stat()
+-     function does not recognize a directory that ends in a backslash
+-     (unless it is a drive root dir, such "c:\").  Forward slashes,
+-     trailing or otherwise, cause no problems for stat().  */
+-  char* c;
+-  for (c = path; *c; c++)
+-    if (*c == '\\') *c = '/';
++   /* Remove unnecessary trailing slashes.  On some versions of MS
++      Windows, trailing  _forward_ slashes cause no problems for stat().
++      On newer versions, stat() does not recognise a directory that ends
++      in a '\\' or '/', unless it is a drive root dir, such as "c:/",
++      where it is obligatory.  */
++   int pathlen = strlen (path);
++   char* end = path + pathlen - 1;
++   /* Preserve the lead '/' or lead "c:/".  */
++   char* start = path + (pathlen > 2 && path[1] == ':' ? 3 : 1);
++   
++   for (; end > start && IS_DIR_SEPARATOR (*end); end--)
++     *end = 0;
+ #endif
+ 
+   p = XNEW (cpp_dir);
+diff -Naur gcc-4.2.1/gcc/config/arm/t-arm-elf gcc-4.2.1-arm/gcc/config/arm/t-arm-elf
+--- gcc-4.2.1/gcc/config/arm/t-arm-elf	Mon Nov  6 12:13:53 2006
++++ gcc-4.2.1-arm/gcc/config/arm/t-arm-elf	Tue Aug 14 17:42:11 2007
+@@ -8,53 +8,53 @@
+ 
+ MULTILIB_OPTIONS     = marm/mthumb
+ MULTILIB_DIRNAMES    = arm thumb
+-MULTILIB_EXCEPTIONS  = 
++MULTILIB_EXCEPTIONS  =
+ MULTILIB_MATCHES     =
+ 
+ # MULTILIB_OPTIONS    += mcpu=ep9312
+ # MULTILIB_DIRNAMES   += ep9312
+ # MULTILIB_EXCEPTIONS += *mthumb/*mcpu=ep9312*
+-# 	
+-# MULTILIB_OPTIONS     += mlittle-endian/mbig-endian
+-# MULTILIB_DIRNAMES    += le be
+-# MULTILIB_MATCHES     += mbig-endian=mbe mlittle-endian=mle
+-# 
+-# MULTILIB_OPTIONS    += mhard-float/msoft-float
+-# MULTILIB_DIRNAMES   += fpu soft
+-# MULTILIB_EXCEPTIONS += *mthumb/*mhard-float*
+-# 
+-# MULTILIB_OPTIONS    += mno-thumb-interwork/mthumb-interwork
+-# MULTILIB_DIRNAMES   += normal interwork
+-# 
++
++MULTILIB_OPTIONS     += mlittle-endian/mbig-endian
++MULTILIB_DIRNAMES    += le be
++MULTILIB_MATCHES     += mbig-endian=mbe mlittle-endian=mle
++
++MULTILIB_OPTIONS    += mhard-float/msoft-float
++MULTILIB_DIRNAMES   += fpu soft
++MULTILIB_EXCEPTIONS += *mthumb/*mhard-float*
++
++MULTILIB_OPTIONS    += mno-thumb-interwork/mthumb-interwork
++MULTILIB_DIRNAMES   += normal interwork
++
+ # MULTILIB_OPTIONS    += fno-leading-underscore/fleading-underscore
+ # MULTILIB_DIRNAMES   += elf under
+-# 
+-# MULTILIB_OPTIONS    += mcpu=arm7
+-# MULTILIB_DIRNAMES   += nofmult
+-# MULTILIB_EXCEPTIONS += *mthumb*/*mcpu=arm7*
+-# # Note: the multilib_exceptions matches both -mthumb and
+-# # -mthumb-interwork
+-# #
+-# # We have to match all the arm cpu variants which do not have the
+-# # multiply instruction and treat them as if the user had specified
+-# # -mcpu=arm7.  Note that in the following the ? is interpreted as
+-# # an = for the purposes of matching command line options.
+-# # FIXME: There ought to be a better way to do this.
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7d
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7di
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm70
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm700
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm700i
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm710
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm710c
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7100
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7500
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7500fe
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm6
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm60
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm600
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm610
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm620
++
++MULTILIB_OPTIONS    += mcpu=arm7
++MULTILIB_DIRNAMES   += nofmult
++MULTILIB_EXCEPTIONS += *mthumb*/*mcpu=arm7*
++# Note: the multilib_exceptions matches both -mthumb and
++# -mthumb-interwork
++#
++# We have to match all the arm cpu variants which do not have the
++# multiply instruction and treat them as if the user had specified
++# -mcpu=arm7.  Note that in the following the ? is interpreted as
++# an = for the purposes of matching command line options.
++# FIXME: There ought to be a better way to do this.
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7d
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7di
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm70
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm700
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm700i
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm710
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm710c
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7100
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7500
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7500fe
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm6
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm60
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm600
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm610
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm620
+ 
+ EXTRA_MULTILIB_PARTS = crtbegin.o crtend.o crti.o crtn.o
+ 
+diff -Naur gcc-4.2.1/gcc/configure gcc-4.2.1-arm/gcc/configure
+--- gcc-4.2.1/gcc/configure	Tue Jan  2 03:44:31 2007
++++ gcc-4.2.1-arm/gcc/configure	Tue Aug 14 17:42:11 2007
+@@ -12885,11 +12885,14 @@
+ #endif
+ /* We use char because int might match the return type of a gcc2
+    builtin and then its argument prototype would still apply.  */
+-char RegOpenKeyExA ();
++#include <windows.h>
++static HKEY reg_key = (HKEY) INVALID_HANDLE_VALUE;
+ int
+ main ()
+ {
+-RegOpenKeyExA ();
++  LONG res;
++  res = RegOpenKeyExA (HKEY_LOCAL_MACHINE, "SOFTWARE", 0,
++			   KEY_READ, &reg_key);
+   ;
+   return 0;
+ }
