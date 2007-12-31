@@ -1,0 +1,243 @@
+diff -Naur gcc-4.2.2/gcc/Makefile.in gcc-4.2.2-arm/gcc/Makefile.in
+--- gcc-4.2.2/gcc/Makefile.in	Sat Sep  1 15:28:30 2007
++++ gcc-4.2.2-arm/gcc/Makefile.in	Sat Dec  8 20:47:02 2007
+@@ -870,7 +870,7 @@
+ # -I$(@D) and -I$(srcdir)/$(@D) cause the subdirectory of the file
+ # currently being compiled, in both source trees, to be examined as well.
+ # libintl.h will be found in ../intl if we are using the included libintl.
+-INCLUDES = -I. -I$(@D) -I$(srcdir) -I$(srcdir)/$(@D) \
++INCLUDES = -I. -I$(srcdir) \
+ 	   -I$(srcdir)/../include @INCINTL@ \
+ 	   $(CPPINC) $(GMPINC) $(DECNUMINC)
+ 
+diff -Naur gcc-4.2.2/gcc/c-incpath.c gcc-4.2.2-arm/gcc/c-incpath.c
+--- gcc-4.2.2/gcc/c-incpath.c	Sat Sep  1 15:28:30 2007
++++ gcc-4.2.2-arm/gcc/c-incpath.c	Sat Dec  8 20:47:02 2007
+@@ -340,13 +340,18 @@
+   cpp_dir *p;
+ 
+ #if defined (HAVE_DOS_BASED_FILE_SYSTEM)
+-  /* Convert all backslashes to slashes.  The native CRT stat()
+-     function does not recognize a directory that ends in a backslash
+-     (unless it is a drive root dir, such "c:\").  Forward slashes,
+-     trailing or otherwise, cause no problems for stat().  */
+-  char* c;
+-  for (c = path; *c; c++)
+-    if (*c == '\\') *c = '/';
++   /* Remove unnecessary trailing slashes.  On some versions of MS
++      Windows, trailing  _forward_ slashes cause no problems for stat().
++      On newer versions, stat() does not recognise a directory that ends
++      in a '\\' or '/', unless it is a drive root dir, such as "c:/",
++      where it is obligatory.  */
++   int pathlen = strlen (path);
++   char* end = path + pathlen - 1;
++   /* Preserve the lead '/' or lead "c:/".  */
++   char* start = path + (pathlen > 2 && path[1] == ':' ? 3 : 1);
++   
++   for (; end > start && IS_DIR_SEPARATOR (*end); end--)
++     *end = 0;
+ #endif
+ 
+   p = XNEW (cpp_dir);
+diff -Naur gcc-4.2.2/gcc/config/arm/t-arm-elf gcc-4.2.2-arm/gcc/config/arm/t-arm-elf
+--- gcc-4.2.2/gcc/config/arm/t-arm-elf	Mon Nov  6 12:13:53 2006
++++ gcc-4.2.2-arm/gcc/config/arm/t-arm-elf	Sat Dec  8 20:47:02 2007
+@@ -8,53 +8,53 @@
+ 
+ MULTILIB_OPTIONS     = marm/mthumb
+ MULTILIB_DIRNAMES    = arm thumb
+-MULTILIB_EXCEPTIONS  = 
++MULTILIB_EXCEPTIONS  =
+ MULTILIB_MATCHES     =
+ 
+ # MULTILIB_OPTIONS    += mcpu=ep9312
+ # MULTILIB_DIRNAMES   += ep9312
+ # MULTILIB_EXCEPTIONS += *mthumb/*mcpu=ep9312*
+-# 	
+-# MULTILIB_OPTIONS     += mlittle-endian/mbig-endian
+-# MULTILIB_DIRNAMES    += le be
+-# MULTILIB_MATCHES     += mbig-endian=mbe mlittle-endian=mle
+-# 
+-# MULTILIB_OPTIONS    += mhard-float/msoft-float
+-# MULTILIB_DIRNAMES   += fpu soft
+-# MULTILIB_EXCEPTIONS += *mthumb/*mhard-float*
+-# 
+-# MULTILIB_OPTIONS    += mno-thumb-interwork/mthumb-interwork
+-# MULTILIB_DIRNAMES   += normal interwork
+-# 
++
++MULTILIB_OPTIONS     += mlittle-endian/mbig-endian
++MULTILIB_DIRNAMES    += le be
++MULTILIB_MATCHES     += mbig-endian=mbe mlittle-endian=mle
++
++MULTILIB_OPTIONS    += mhard-float/msoft-float
++MULTILIB_DIRNAMES   += fpu soft
++MULTILIB_EXCEPTIONS += *mthumb/*mhard-float*
++
++MULTILIB_OPTIONS    += mno-thumb-interwork/mthumb-interwork
++MULTILIB_DIRNAMES   += normal interwork
++
+ # MULTILIB_OPTIONS    += fno-leading-underscore/fleading-underscore
+ # MULTILIB_DIRNAMES   += elf under
+-# 
+-# MULTILIB_OPTIONS    += mcpu=arm7
+-# MULTILIB_DIRNAMES   += nofmult
+-# MULTILIB_EXCEPTIONS += *mthumb*/*mcpu=arm7*
+-# # Note: the multilib_exceptions matches both -mthumb and
+-# # -mthumb-interwork
+-# #
+-# # We have to match all the arm cpu variants which do not have the
+-# # multiply instruction and treat them as if the user had specified
+-# # -mcpu=arm7.  Note that in the following the ? is interpreted as
+-# # an = for the purposes of matching command line options.
+-# # FIXME: There ought to be a better way to do this.
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7d
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7di
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm70
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm700
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm700i
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm710
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm710c
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7100
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7500
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7500fe
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm6
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm60
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm600
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm610
+-# MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm620
++
++MULTILIB_OPTIONS    += mcpu=arm7
++MULTILIB_DIRNAMES   += nofmult
++MULTILIB_EXCEPTIONS += *mthumb*/*mcpu=arm7*
++# Note: the multilib_exceptions matches both -mthumb and
++# -mthumb-interwork
++#
++# We have to match all the arm cpu variants which do not have the
++# multiply instruction and treat them as if the user had specified
++# -mcpu=arm7.  Note that in the following the ? is interpreted as
++# an = for the purposes of matching command line options.
++# FIXME: There ought to be a better way to do this.
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7d
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7di
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm70
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm700
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm700i
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm710
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm710c
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7100
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7500
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm7500fe
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm6
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm60
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm600
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm610
++MULTILIB_MATCHES    += mcpu?arm7=mcpu?arm620
+ 
+ EXTRA_MULTILIB_PARTS = crtbegin.o crtend.o crti.o crtn.o
+ 
+diff -Naur gcc-4.2.2/gcc/configure gcc-4.2.2-arm/gcc/configure
+--- gcc-4.2.2/gcc/configure	Sun Sep 23 21:08:04 2007
++++ gcc-4.2.2-arm/gcc/configure	Sat Dec  8 20:47:02 2007
+@@ -12885,11 +12885,14 @@
+ #endif
+ /* We use char because int might match the return type of a gcc2
+    builtin and then its argument prototype would still apply.  */
+-char RegOpenKeyExA ();
++#include <windows.h>
++static HKEY reg_key = (HKEY) INVALID_HANDLE_VALUE;
+ int
+ main ()
+ {
+-RegOpenKeyExA ();
++  LONG res;
++  res = RegOpenKeyExA (HKEY_LOCAL_MACHINE, "SOFTWARE", 0,
++			   KEY_READ, &reg_key);
+   ;
+   return 0;
+ }
+diff -Naur gcc-4.2.2/gcc/gcc.c gcc-4.2.2-arm/gcc/gcc.c
+--- gcc-4.2.2/gcc/gcc.c	Sat Sep  1 15:28:30 2007
++++ gcc-4.2.2-arm/gcc/gcc.c	Sat Dec  8 20:48:53 2007
+@@ -3369,8 +3369,6 @@
+       gcc_libexec_prefix = make_relative_prefix (argv[0],
+ 						 standard_bindir_prefix,
+ 						 standard_libexec_prefix);
+-      if (gcc_exec_prefix)
+-	putenv (concat ("GCC_EXEC_PREFIX=", gcc_exec_prefix, NULL));
+     }
+   else
+     {
+@@ -6213,10 +6211,21 @@
+ 
+   /* We need to check standard_exec_prefix/just_machine_suffix/specs
+      for any override of as, ld and libraries.  */
++  if ( gcc_exec_prefix )
++  {
++    specs_file = alloca (strlen (gcc_exec_prefix)
++		         + strlen (just_machine_suffix) + sizeof ("specs"));
++
++    strcpy (specs_file, gcc_exec_prefix);
++  } else {
++
+   specs_file = alloca (strlen (standard_exec_prefix)
+ 		       + strlen (just_machine_suffix) + sizeof ("specs"));
+ 
+   strcpy (specs_file, standard_exec_prefix);
++
++  }
++
+   strcat (specs_file, just_machine_suffix);
+   strcat (specs_file, "specs");
+   if (access (specs_file, R_OK) == 0)
+diff -Naur gcc-4.2.2/gcc/prefix.c gcc-4.2.2-arm/gcc/prefix.c
+--- gcc-4.2.2/gcc/prefix.c	Sat Sep  1 15:28:30 2007
++++ gcc-4.2.2-arm/gcc/prefix.c	Sat Dec  8 20:48:53 2007
+@@ -245,13 +245,16 @@
+    The returned string is always malloc-ed, and the caller is
+    responsible for freeing it.  */
+ 
++
++static const char *old_prefix = PREFIX;
++
+ char *
+ update_path (const char *path, const char *key)
+ {
+   char *result, *p;
+-  const int len = strlen (std_prefix);
++  const int len = strlen (old_prefix);
+ 
+-  if (! strncmp (path, std_prefix, len)
++  if (! strncmp (path, old_prefix, len)
+       && (IS_DIR_SEPARATOR(path[len])
+           || path[len] == '\0')
+       && key != 0)
+@@ -353,4 +356,6 @@
+ set_std_prefix (const char *prefix, int len)
+ {
+   std_prefix = save_string (prefix, len);
++
++	putenv (concat ("GCC_EXEC_PREFIX=", std_prefix, NULL));
+ }
+diff -Naur gcc-4.2.2/gcc/toplev.c gcc-4.2.2-arm/gcc/toplev.c
+--- gcc-4.2.2/gcc/toplev.c	Sat Sep  1 15:28:30 2007
++++ gcc-4.2.2-arm/gcc/toplev.c	Sat Dec  8 20:48:53 2007
+@@ -81,6 +81,7 @@
+ #include "value-prof.h"
+ #include "alloc-pool.h"
+ #include "tree-mudflap.h"
++#include "prefix.h"
+ 
+ #if defined (DWARF2_UNWIND_INFO) || defined (DWARF2_DEBUGGING_INFO)
+ #include "dwarf2out.h"
+@@ -1478,6 +1479,10 @@
+   progname = p;
+ 
+   xmalloc_set_program_name (progname);
++
++  p = getenv("GCC_EXEC_PREFIX");
++  if (p && strlen(p)) set_std_prefix (p, strlen(p));
++
+ 
+   hex_init ();
+ 
